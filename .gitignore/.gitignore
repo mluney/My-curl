@@ -1,0 +1,236 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+
+
+/*MICHAEL LUNEY  Test 2*/
+/*
+Question 1) Works but not with google
+Question 2) should work 100%
+Question 3) I don't see any problems it already prints the errors bit I added some code look of "ADDED HERE"
+Question 4) I think I did this right but don't have a file to test it on.
+
+*/
+struct addrinfo hints, *infoptr;
+
+int main(int argc, char** argv){
+
+    
+   
+/*********************MICHAEL LUNEY GET THE ADDRESS CORRECT*(Question 1)*************************************/
+        int i=0;
+        
+        char holder[(sizeof(argv[1]))];
+        char* get = "GET ";
+        char* hostHold= " HTTP/1.0\r\nHost: ";
+        char* lastThing= "\r\n\r\n";
+        int j =0;
+        int k=0;
+        int y =0;
+        int h =0;
+
+        int blank =0;
+        
+        strcpy (holder,argv[1]);
+        
+/*Lets try a file read shall we************************/
+FILE*file;
+    file=fopen("commandLine","w"); // open the file
+
+    fprintf(file,"%s", holder);
+
+    fclose(file);
+
+                                                   //Make a file with input
+    file = fopen("commandLine", "r");
+    char *web;
+    size_t n = 0;
+    int c;
+
+   
+
+    web = malloc(100);
+    
+     if (file == NULL)
+        printf("file is empty"); //could not open file
+
+    while ((c = fgetc(file)) != EOF)
+    {
+        web[n++] = (char) c;
+    }
+
+    
+    web[n] = '\0';        
+    fclose(file);                                     //read file and make new array
+  
+        while (web[i]!= ':') {
+              blank++;
+              i++;  
+        }
+            i=i+3;
+            blank+=2;                                 //first partition
+/*God I hope this works*********************************/      
+        
+        while(web[i]!='/') {                         //second partition
+          
+            k++;
+            i++;
+        }
+        int sze=strlen(web);
+       
+        int size= sze-i;
+        char firstBit[size];
+       
+        strncpy(firstBit, web+i, size);                   //file partition and storage
+      
+        char httpRequest [1000];
+        
+        //set the first part of request
+       
+        strncpy(httpRequest,get+0, 4);                        //standard
+        
+       
+ 
+        //set the destanation file in request
+      
+        strcat(httpRequest,firstBit);                      //file import
+        
+       
+        strcat(httpRequest,hostHold);                      //standard host
+        
+        
+        //set the host of the line
+        blank++;
+        
+        
+        char host1[k];
+        strncpy(host1, web+blank, k);
+        strcat(httpRequest,host1);                          //host import
+        
+        
+        //add the ending lines
+        
+        
+        strcat(httpRequest,lastThing);                       //standard
+        
+
+
+/******************************Michael Luney ADDRESS CORRECT END**(Question 1)************************/
+
+/***********************START OF YOUR CODE*****************************************/
+int sock = 0;
+
+    if((sock  = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+        printf("Socket creating error\n");
+        
+        exit(1);
+    }
+
+    hints.ai_family = AF_INET;
+    int result = getaddrinfo(host1,NULL,&hints,&infoptr);
+    if(result){
+        printf("DNS error\n");
+        printf("%s\n",gai_strerror(result));/***************************Question 3***ADDED HERE********/
+        exit(1);
+    }
+ 
+    char host[256];
+    struct addrinfo *p;
+
+    for(p = infoptr; p != NULL; p = p->ai_next){
+        getnameinfo(p->ai_addr, p->ai_addrlen, host, sizeof(host),NULL, 0, NI_NUMERICHOST);
+
+        struct sockaddr_in serv_addr;
+        memset(&serv_addr, '0', sizeof(serv_addr));
+
+        int port = 80;
+
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_port = htons(port);
+
+        if( inet_pton(AF_INET, host, &serv_addr.sin_addr) <= 0){
+            printf("Address translation error\n");
+            
+            continue;
+        }
+
+        if( connect(sock, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0){
+            printf("Connect error\n");
+           
+            continue;
+        }
+
+
+
+      // char *http_request = "GET /~drawert/cs335/index.html HTTP/1.0\r\nHost: www.cs.unca.edu\r\n\r\n";
+        
+       
+
+        send(sock, httpRequest, strlen(httpRequest), 0);
+        printf("%s\n", httpRequest);
+
+        char buffer[1024];
+        int valread = read(sock, buffer, 1024);
+        printf("%s\n", buffer);
+        
+       
+        break; // success, don't try any more
+    }
+    /********************************END OF YOUR CODE*****************************/
+    
+    /*************************Michael Luney REDIRECT*Question 4**********************/
+    char* found= "302 Found";
+    if(strcmp(gai_strerror(result),found)==0) {
+        printf("This URL contains a redirect\n");
+        
+        fork();
+        
+    }
+    freeaddrinfo(infoptr);
+   
+   /*********************MICHAEL LUNEY MAKE A FILE(Question 2)*********************************/ 
+    FILE*fp;
+    if (fp = fopen("index.html", "r")) {    //open a file with that name
+            printf("Error File already exsists\n");    //check and see if it exsits
+            exit(-1);
+        }
+    fp=fopen("index.html","w"); // open the file
+        
+        if (fp == NULL) {             //if file is empty throw error
+            printf("Error opening file (File Empty)!\n");
+        exit(-1);
+        }
+        char buffer[1024];                    //take in all needed info 
+        int valread = read(sock, buffer, 1024);
+        
+        fprintf(fp,"%s\n", buffer);
+        fclose(fp);
+    /*******************************************************************************/
+    
+    
+    return 0; // success
+
+} // end of main
+
+
+
+/*
+1. (1 point) Change the code to take a URL on the command line, and go to that URL:
+
+          ./my-curl http://www.cs.unca.edu/~drawert/cs335/index.html
+
+
+2. (2 points) Change the program to save the data retrieved from the web page as a file with the same name in the current directory.  The above call would create a file named "index.html".  If the filename is not given (path ends in a '/'), assume the file is named 'index.html'.  If a file already exists with that name, print an error and exit with a non-zero exit code.
+     
+
+3. (1 point) Change the program to print out the HTTP status code and code definition of the response.  E.g. "200 OK" or "404 Not Found" to the terminal.
+
+4. (5 points) The HTTP response of "302 Found", is a redirection.  This means that the web server is instructing the client to look at a different URL for the resulting file.  You should implement this by calling fork() to create a child process, in the child using execv() to execute the same program with different arguments (the new URL).  The parent should wait for the child to finish.  If multiple redirects are found, then this process may proceed recursively.
+*/
+
+
